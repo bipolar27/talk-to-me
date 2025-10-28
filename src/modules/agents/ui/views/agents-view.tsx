@@ -1,6 +1,6 @@
 "use client";
 
-import { EmptyState } from "@/components/empty-state";
+import { ErrorState } from "@/components/error-state";
 import { LoadingState } from "@/components/loading-state";
 import { Button } from "@/components/ui/button";
 import { useTRPC } from "@/trpc/client";
@@ -10,8 +10,11 @@ import { DataTable } from "../components/data-table";
 import { columns } from "../components/columns";
 import { useAgentsFilters } from "../../hooks/use-agents-filters";
 import { DataPagination } from "../components/data-pagination"; // ✅ Added missing import
+import { useRouter } from "next/navigation";
 
 export const AgentsView = () => {
+
+  const router = useRouter();
   const [filters, setFilters] = useAgentsFilters();
   const trpc = useTRPC();
 
@@ -23,7 +26,11 @@ export const AgentsView = () => {
 
   return (
     <div className="flex-1 pb-4 px-4 md:px-8 flex flex-col gap-y-4">
-      <DataTable data={data.items} columns={columns} />
+      <DataTable 
+        data={data.items} 
+        columns={columns} 
+        onRowClick={(row)=>router.push(`/agents/${row.id}`)}
+      />
 
       {/* ✅ Fixed syntax here */}
       <DataPagination
@@ -34,7 +41,7 @@ export const AgentsView = () => {
 
       {/* ✅ Moved EmptyState below DataPagination and fixed syntax */}
       {data.items.length === 0 && (
-        <EmptyState
+        <ErrorState
           title="Create your first agent"
           description="Create an agent to join your meetings. Each agent will follow your instructions and can interact with participants during the call."
         />
@@ -54,7 +61,7 @@ export const AgentsViewLoading = () => {
 
 export const AgentsViewError = () => {
   return (
-    <EmptyState
+    <ErrorState
       title="Error Loading Agents"
       description="Something went wrong!"
     />
