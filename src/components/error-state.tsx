@@ -8,7 +8,7 @@ interface Props {
   description: string;
 }
 
-export const EmptyState = ({ title, description }: Props) => {
+export const ErrorState = ({ title, description }: Props) => {
   return (
     <div className="flex flex-col items-center justify-center">
       <Image src="/empty.svg" alt="Empty" width={240} height={240} />
