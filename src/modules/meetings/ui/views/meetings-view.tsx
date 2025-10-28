@@ -7,11 +7,11 @@ import{LoadingState} from "@/components/loading-state";
 
 export const MeetingsView = () => {
   const trpc = useTRPC();
-  const { data } = useSuspenseQuery(trpc.meetings.getMany.queryOptions());
+  const { data } = useSuspenseQuery(trpc.meetings.getMany.queryOptions({}));
 
 
   return (
-    <div>
+    <div className="overflow-x-scroll">
       {JSON.stringify(data)}
     </div>
   );
