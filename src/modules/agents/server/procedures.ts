@@ -3,7 +3,7 @@ import { eq, getTableColumns, sql, desc, and, count } from "drizzle-orm";
 import { ilike } from "drizzle-orm"; // ✅ Required for PostgreSQL
 import { agents } from "@/db/schema";
 import { createTRPCRouter, protectedProcedure } from "@/trpc/init";
-import { agentsInsertSchema } from "../schemas";
+import { agentsInsertSchema, agentsUpdateSchema } from "../schemas";
 import { z } from "zod";
 import {
   DEFAULT_PAGE,
@@ -12,9 +12,54 @@ import {
   MIN_PAGE_SIZE,
 } from "@/constants";
 import { TRPCError } from "@trpc/server";
+import { X } from "lucide-react";
 
 export const agentsRouter = createTRPCRouter({
-  // ✅ Get one agent by ID
+  update :protectedProcedure
+    .input(agentsUpdateSchema)
+    .mutation(async({ctx, input})=>{
+      const [updatedAgent] = await db   
+          .update(agents)
+          .set(input)
+          .where(
+            and(
+              eq(agents.id, input.id),
+              eq(agents.userId,ctx.auth.user.id)
+            )
+          )
+          .returning();
+          if(!updatedAgent){
+            throw new TRPCError({
+              code:"NOT_FOUND",
+              message:"Agent Not Found"
+            });
+          }
+          return updatedAgent;
+    })
+
+  ,
+
+  remove:protectedProcedure
+    .input(z.object({id:z.string()}))
+    .mutation(async({ctx,input})=>{
+      const [removedAgent] = await db
+        .delete(agents)
+        .where(
+          and(
+            eq(agents.id, input.id),
+            eq(agents.userId,ctx.auth.user.id)
+          )
+        )
+        .returning()
+        if(!removedAgent){
+          throw new TRPCError({
+            code:"NOT_FOUND",
+            message:"Agent Not Found"
+          });
+        }
+        return removedAgent;
+    }),
+
   getOne: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ input,ctx }) => {
