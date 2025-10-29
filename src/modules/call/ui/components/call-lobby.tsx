@@ -10,9 +10,13 @@ import {
 } from "@stream-io/video-react-sdk";
 
 
+
+
 import { authClient } from "@/lib/auth-client";
 import { generateAvatarUri } from "@/lib/avatar";
 import {Button } from "@/components/ui/button";
+import "@stream-io/video-react-sdk/dist/css/styles.css";
+
 
 interface Props{
     onJoin:()=> void;
