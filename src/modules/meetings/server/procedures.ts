@@ -1,7 +1,6 @@
 import { db } from "@/db";
-import { eq, getTableColumns, desc, and, count } from "drizzle-orm";
-import { ilike } from "drizzle-orm"; // ✅ Required for PostgreSQL
-import { meetings } from "@/db/schema";
+import { eq, getTableColumns, desc, and, count, ilike,sql } from "drizzle-orm";
+import { agents, meetings } from "@/db/schema";
 import { createTRPCRouter, protectedProcedure } from "@/trpc/init";
 import { z } from "zod";
 import {
@@ -11,7 +10,6 @@ import {
   MIN_PAGE_SIZE,
 } from "@/constants";
 import { TRPCError } from "@trpc/server";
-import { X } from "lucide-react";
 import { meetingsInsertSchema, meetingsUpdateSchema } from "../schemas";
 
 export const meetingsRouter = createTRPCRouter({
@@ -76,8 +74,7 @@ export const meetingsRouter = createTRPCRouter({
 
   getMany: protectedProcedure
     .input(
-      z
-        .object({
+      z.object({
           page: z.number().default(DEFAULT_PAGE),
           pageSize: z
             .number()
@@ -86,24 +83,24 @@ export const meetingsRouter = createTRPCRouter({
             .default(DEFAULT_PAGE_SIZE),
           search: z.string().nullish(),
         })
-        .optional()
     )
-    .query(async ({ ctx, input = {} }) => {
-      const { search, page = DEFAULT_PAGE, pageSize = DEFAULT_PAGE_SIZE } = input;
-
+    .query(async ({ ctx, input}) => {
+      const { search, page, pageSize} = input;
 
       const data = await db
         .select({
           ...getTableColumns(meetings),
+          agent:agents,
+          duration:sql<number>`EXTRACT(EPCOH FROM (ended_at - started_at))`.as("duration",)
+
         })
         .from(meetings)
+        .innerJoin(agents,eq(meetings.agentId, agents.id))
         .where(
-          search
-            ? and(
+          and(
                 eq(meetings.userId, ctx.auth.user.id),
-                ilike(meetings.name, `%${search}%`)
+                search? ilike(meetings.name, `%${search}%`):undefined,
               )
-            : eq(meetings.userId, ctx.auth.user.id) // ✅ bracket fixed here
         )
         .orderBy(desc(meetings.createdAt), desc(meetings.id))
         .limit(pageSize)
@@ -112,13 +109,12 @@ export const meetingsRouter = createTRPCRouter({
       const [total] = await db
         .select({ count: count(meetings.id) })
         .from(meetings)
+        .innerJoin(agents,eq(meetings.agentId, agents.id))
         .where(
-          search
-            ? and(
+            and(
                 eq(meetings.userId, ctx.auth.user.id),
-                ilike(meetings.name, `%${search}%`)
+                search? ilike(meetings.name, `%${search}%`):undefined
               )
-            : eq(meetings.userId, ctx.auth.user.id) // ✅ bracket fixed here too
         );
 
       const totalPages = Math.ceil(Number(total.count) / pageSize);
