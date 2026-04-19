@@ -97,3 +97,35 @@ export const CallLobby = ({ onJoin }: Props) => {
     </div>
   );
 };
+/*import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
+
+interface Props {
+  onJoin: () => void;
+  isJoining: boolean; // Add this line
+}
+
+export const CallLobby = ({ onJoin, isJoining }: Props) => {
+  return (
+    <div className="flex flex-col items-center justify-center h-screen bg-black text-white gap-6">
+      <h1 className="text-3xl font-bold">Ready to join?</h1>
+      <p className="text-muted-foreground">The AI Agent is prepared for the session.</p>
+      
+      <Button 
+        onClick={onJoin} 
+        disabled={isJoining} // Disable button while joining
+        size="lg"
+        className="w-40 bg-green-600 hover:bg-green-700"
+      >
+        {isJoining ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Joining...
+          </>
+        ) : (
+          "Join Meeting"
+        )}
+      </Button>
+    </div>
+  );
+};*/

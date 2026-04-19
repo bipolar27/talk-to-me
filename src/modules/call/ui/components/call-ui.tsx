@@ -99,3 +99,46 @@ return (
   </StreamTheme>
 );
 };
+/*
+import { useState } from "react";
+import { StreamTheme, useCall, StreamCall } from "@stream-io/video-react-sdk";
+import { CallLobby } from "./call-lobby";
+import { CallActive } from "./call-active";
+import { CallEnded } from "./call-ended";
+
+export const CallUI = ({ meetingName }: { meetingName: string }) => {
+  const call = useCall();
+  const [show, setShow] = useState<"lobby" | "call" | "ended">("lobby");
+  const [isJoining, setIsJoining] = useState(false);
+
+  const handleJoin = async () => {
+    if (!call || isJoining || call.state.callingState === "joined") return;
+    try {
+      setIsJoining(true);
+      await call.join();
+      setShow("call");
+    } catch (error) {
+      console.error("Join error:", error);
+    } finally {
+      setIsJoining(false);
+    }
+  };
+
+  const handleLeave = async () => {
+    if (!call) return;
+    await call.endCall();
+    setShow("ended");
+  };
+
+  return (
+    <StreamTheme className="h-full">
+      {show === "lobby" && <CallLobby onJoin={handleJoin} isJoining={isJoining} />}
+      {show === "call" && call && (
+        <StreamCall call={call}>
+          <CallActive onLeave={handleLeave} meetingName={meetingName} />
+        </StreamCall>
+      )}
+      {show === "ended" && <CallEnded />}
+    </StreamTheme>
+  );
+};*/
