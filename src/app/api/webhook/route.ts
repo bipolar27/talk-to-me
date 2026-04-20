@@ -235,7 +235,7 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ status: "ok" });
-}*/
+}*//*
 import { eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { streamVideo } from "@/lib/stream-video";
@@ -307,5 +307,117 @@ export async function POST(req: NextRequest) {
             activeConnections.delete(meetingId);
         }
     }
+    return NextResponse.json({ status: "ok" });
+}
+*/
+import { eq } from "drizzle-orm";
+import { NextRequest, NextResponse } from "next/server";
+import { streamVideo } from "@/lib/stream-video";
+import { db } from "@/db";
+import { meetings, agents } from "@/db/schema";
+
+const activeConnections = new Set<string>();
+
+export async function POST(req: NextRequest) {
+    const body = await req.text();
+    if (!body) return NextResponse.json({ status: "empty" });
+
+    const payload = JSON.parse(body);
+
+    if (payload.type === "call.session_started") {
+        const meetingId = payload.call.custom?.meetingId;
+
+        if (!meetingId) {
+            return NextResponse.json({ error: "No meetingId" }, { status: 400 });
+        }
+
+        // جلوگیری double agent
+        if (activeConnections.has(meetingId)) {
+            return NextResponse.json({ status: "busy" });
+        }
+        activeConnections.add(meetingId);
+
+        // get meeting
+        const [meeting] = await db
+            .select()
+            .from(meetings)
+            .where(eq(meetings.id, meetingId));
+
+        if (!meeting || meeting.status === "active") {
+            activeConnections.delete(meetingId);
+            return NextResponse.json({ status: "skip" });
+        }
+
+        // set active
+        await db
+            .update(meetings)
+            .set({ status: "active" })
+            .where(eq(meetings.id, meetingId));
+
+        // get agent
+        const [agent] = await db
+            .select()
+            .from(agents)
+            .where(eq(agents.id, meeting.agentId));
+
+        if (!agent) {
+            activeConnections.delete(meetingId);
+            return NextResponse.json({ error: "Agent not found" }, { status: 404 });
+        }
+
+        try {
+            console.log("🚀 CONNECTING AI AGENT...");
+
+            const call = streamVideo.video.call("default", meetingId);
+
+            const ai = await streamVideo.video.connectOpenAi({
+                call,
+                openAiApiKey: process.env.OPENAI_API_KEY!,
+                agentUserId: agent.id,
+            });
+
+            console.log("✅ AI CONNECTED");
+
+            // 🔥 STEP 1: INIT SESSION (MOST IMPORTANT)
+            await ai.updateSession({
+                instructions:
+                    agent.instructions ||
+                    "You are a helpful AI assistant. Speak clearly and confidently.",
+                modalities: ["audio", "text"],
+                voice: "alloy",
+                turn_detection: { type: "server_vad" },
+            });
+
+            console.log("✅ SESSION INITIALIZED");
+
+            // 🔥 STEP 2: FORCE FIRST SPEECH
+            const send =
+                (ai as any).send ||
+                (ai as any).sendJSON ||
+                ((ai as any).socket?.send
+                    ? (data: any) =>
+                          (ai as any).socket.send(JSON.stringify(data))
+                    : null);
+
+            if (send) {
+                send.call(ai, {
+                    type: "response.create",
+                    response: {
+                        modalities: ["audio"],
+                        instructions:
+                            "Say: Hello! I am your AI assistant. Can you hear me?",
+                    },
+                });
+
+                console.log("🎤 AI SPEAK COMMAND SENT");
+            } else {
+                console.log("❌ No send method found");
+            }
+        } catch (error: any) {
+            console.error("❌ AI ERROR:", error.message);
+            activeConnections.delete(meetingId);
+        }
+    }
+
     return NextResponse.json({ status: "ok" });
 }
